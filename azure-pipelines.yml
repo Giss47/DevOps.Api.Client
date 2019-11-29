@@ -1,0 +1,34 @@
+name: $(Year:yyyy).$(Month).$(DayOfMonth)$(Rev:.r)
+trigger:
+- master
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  solution: '**/*.sln'
+  artifactName: 'Hawk.API.Client'
+  buildConfiguration: 'Release'
+steps:
+- task: NuGetToolInstaller@1
+- task: UseDotNet@2
+  displayName: 'Use .NET Core sdk'
+  inputs:
+    packageType: sdk
+    version: 3.0.100
+- task: NuGetCommand@2
+  inputs:
+    command: 'restore'
+    restoreSolution: '**/*.sln'
+    feedsToUse: 'select'
+    vstsFeed: '05a3e00b-fc6d-404d-8c97-35834d4dcc73'
+
+- script: dotnet build --configuration $(buildConfiguration) Hawk.Api.Client.sln
+  displayName: 'Build'
+- script: dotnet pack Hawk.Api.Client.sln --configuration $(buildConfiguration) /p:Version=$(Build.BuildNumber) --output $(Build.ArtifactStagingDirectory)/Output
+  displayName: 'Create NuGet package'
+- task: PublishPipelineArtifact@1
+  displayName: Publish Pipeline Artifact $(artifactName)
+  inputs:
+    artifactName: $(artifactName)
+    path: $(Build.ArtifactStagingDirectory)/Output
